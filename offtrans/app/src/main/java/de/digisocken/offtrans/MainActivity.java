@@ -22,6 +22,8 @@ public class MainActivity extends AppCompatActivity {
     private EntryAdapter resultEntryAdapterDe;
     private EntryAdapter entryAdapterEn;
     private EntryAdapter resultEntryAdapterEn;
+    private EntryAdapter entryAdapterKur;
+    private EntryAdapter resultEntryAdapterKur;
     private ListView entryList;
     private EditText searchView;
     private String lang = "de";
@@ -41,6 +43,11 @@ public class MainActivity extends AppCompatActivity {
                     lang = "en";
                     entryList.setAdapter(entryAdapterEn);
                     entryAdapterEn.notifyDataSetChanged();
+                    return true;
+                case R.id.navigation_kur_tur:
+                    lang = "kur";
+                    entryList.setAdapter(entryAdapterKur);
+                    entryAdapterKur.notifyDataSetChanged();
                     return true;
             }
             return false;
@@ -72,12 +79,14 @@ public class MainActivity extends AppCompatActivity {
 
         entryAdapterDe = new EntryAdapter(this);
         entryAdapterEn = new EntryAdapter(this);
+        entryAdapterKur = new EntryAdapter(this);
         entryList = (ListView) findViewById(R.id.dicList);
         entryList.setEmptyView(findViewById(android.R.id.empty));
         entryList.setAdapter(entryAdapterDe);
 
         resultEntryAdapterDe = new EntryAdapter(this);
         resultEntryAdapterEn = new EntryAdapter(this);
+        resultEntryAdapterKur = new EntryAdapter(this);
         new RetrieveFeedTask().execute();
     }
 
@@ -92,12 +101,19 @@ public class MainActivity extends AppCompatActivity {
             entryList.setAdapter(resultEntryAdapterDe);
             resultEntryAdapterDe.notifyDataSetChanged();
 
+        } else if (lang.equals("kur")) {
+            resultEntryAdapterKur.filter(searchView.getText().toString(), entryAdapterKur);
+            entryList.setAdapter(resultEntryAdapterKur);
+            resultEntryAdapterKur.notifyDataSetChanged();
+
         }
     }
 
     class RetrieveFeedTask extends AsyncTask<String, Void, Void> {
         protected Void doInBackground(String... dummy) {
             try {
+
+                // @todo just repeat the code is a bit strange!?
 
                 XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
                 factory.setNamespaceAware(true);
@@ -143,6 +159,25 @@ public class MainActivity extends AppCompatActivity {
                 }
                 entryAdapterEn.sort();
 
+                ins = getResources().openRawResource(R.raw.kur_tur);
+                xpp.setInput(ins, null);
+                eventType = xpp.getEventType();
+                while (eventType != XmlPullParser.END_DOCUMENT) {
+
+                    if (eventType == XmlPullParser.START_TAG) {
+                        if (xpp.getName().equalsIgnoreCase("orth")) {
+                            dicEntry = new DicEntry();
+                            dicEntry.title = xpp.nextText();
+                        }
+                        if (xpp.getName().equalsIgnoreCase("quote")) {
+                            dicEntry.body = xpp.nextText();
+                            entryAdapterKur.addItem(dicEntry);
+                        }
+                    }
+                    eventType = xpp.next();
+                }
+                entryAdapterKur.sort();
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -154,6 +189,7 @@ public class MainActivity extends AppCompatActivity {
             super.onPostExecute(aVoid);
             entryAdapterDe.notifyDataSetChanged();
             entryAdapterEn.notifyDataSetChanged();
+            entryAdapterKur.notifyDataSetChanged();
         }
     }
 }

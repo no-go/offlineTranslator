@@ -11,4 +11,9 @@
         android:icon="@drawable/de_flag"
         android:title="@string/title_eng_de" />
 
+    <item
+        android:id="@+id/navigation_kur_tur"
+        android:icon="@drawable/kur_flag"
+        android:title="@string/title_kur_tur" />
+
 </menu>
