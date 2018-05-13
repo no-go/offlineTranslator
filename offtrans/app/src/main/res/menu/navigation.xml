@@ -2,18 +2,13 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
+        android:id="@+id/navigation_de"
+        android:icon="@drawable/de_flag"
+        android:title="@string/title_de" />
+
+    <item
         android:id="@+id/navigation_de_en"
         android:icon="@drawable/en_flag"
         android:title="@string/title_de_eng" />
-
-    <item
-        android:id="@+id/navigation_en_de"
-        android:icon="@drawable/de_flag"
-        android:title="@string/title_eng_de" />
-
-    <item
-        android:id="@+id/navigation_kur_tur"
-        android:icon="@drawable/kur_flag"
-        android:title="@string/title_kur_tur" />
 
 </menu>
