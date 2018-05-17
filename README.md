@@ -3,7 +3,7 @@
 this is a very slow starting simple de-eng, eng-de offline translator using two big
 tei xml-files from [freedict.org](https://github.com/freedict/fd-dictionaries).
 
-This App is for test use !!!
+**This App is still alpha!!!**
 
 ## Get the App
 
@@ -19,7 +19,8 @@ no.
 
 ## I need kurdî -> türkçe !
 
-Because freedict has this dictionary, it is easy to implement this! *look at my last commit, how to easy add other translations*
+Because freedict has this dictionary, it is easy to implement this! 
+Take a look on this [commit](https://github.com/no-go/offlineTranslator/commit/84e5cfcc1d189bb4c6a826c5374a053b82771a92), how to easy add other translations.
 
 
 ## Screenshot
