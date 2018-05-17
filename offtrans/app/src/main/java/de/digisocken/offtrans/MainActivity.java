@@ -1,8 +1,18 @@
 package de.digisocken.offtrans;
 
+import android.app.ListActivity;
+import android.app.ListFragment;
+import android.app.LoaderManager;
+import android.content.ContentValues;
+import android.content.CursorLoader;
 import android.content.Intent;
+import android.content.Loader;
+import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v7.app.ActionBar;
@@ -12,6 +22,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserFactory;
@@ -20,12 +31,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
-    private EntryAdapter entryAdapterDe;
-    private EntryAdapter resultEntryAdapterDe;
-    private EntryAdapter entryAdapterEn;
-    private EntryAdapter resultEntryAdapterEn;
+    public static String query = "";
+    private EntryCursorAdapter entryCursorAdapterDe;
+    private EntryCursorAdapter entryCursorAdapterEn;
     private ListView entryList;
     private EditText searchView;
     private String lang = "de";
@@ -38,13 +48,13 @@ public class MainActivity extends AppCompatActivity {
             switch (item.getItemId()) {
                 case R.id.navigation_de:
                     lang = "de";
-                    entryList.setAdapter(entryAdapterDe);
-                    entryAdapterDe.notifyDataSetChanged();
+                    entryList.setAdapter(entryCursorAdapterDe);
+                    entryCursorAdapterDe.notifyDataSetChanged();
                     return true;
                 case R.id.navigation_de_en:
                     lang = "en";
-                    entryList.setAdapter(entryAdapterEn);
-                    entryAdapterEn.notifyDataSetChanged();
+                    entryList.setAdapter(entryCursorAdapterEn);
+                    entryCursorAdapterEn.notifyDataSetChanged();
                     return true;
             }
             return false;
@@ -74,39 +84,75 @@ public class MainActivity extends AppCompatActivity {
 
         searchView = (EditText) findViewById(R.id.searchView);
 
-        entryAdapterDe = new EntryAdapter(this);
-        entryAdapterEn = new EntryAdapter(this);
+        getLoaderManager().initLoader(0, null, this);
+        entryCursorAdapterDe = new EntryCursorAdapter(this, null, 0);
+
         entryList = (ListView) findViewById(R.id.dicList);
         entryList.setEmptyView(findViewById(android.R.id.empty));
-        entryList.setAdapter(entryAdapterDe);
+        entryList.setAdapter(entryCursorAdapterDe);
 
         entryList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                DicEntry item = (DicEntry) adapterView.getItemAtPosition(i);
+                /**
+                 * @TODO !!!
+                 */
+                /*
+                DbEntry item = (DbEntry) adapterView.getItemAtPosition(i);
                 String msg = item.title + "\n\n" + item.body;
                 Intent myIntent = new Intent(MainActivity.this, EditActivity.class);
                 myIntent.putExtra("msg", msg);
                 startActivity(myIntent);
+                */
             }
         });
-
-        resultEntryAdapterDe = new EntryAdapter(this);
-        resultEntryAdapterEn = new EntryAdapter(this);
-        new RetrieveFeedTask().execute();
+        SharedPreferences mPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        if (!mPreferences.contains("initial_read")) {
+            mPreferences.edit().putBoolean("initial_read", true).commit();
+            new RetrieveFeedTask().execute();
+        }
     }
 
     public void search(View view) {
-        if (lang.equals("en")) {
-            resultEntryAdapterEn.filter(searchView.getText().toString(), entryAdapterEn);
-            entryList.setAdapter(resultEntryAdapterEn);
-            resultEntryAdapterEn.notifyDataSetChanged();
+        getLoaderManager().restartLoader(0, null, this);
+    }
 
-        } else if (lang.equals("de")) {
-            resultEntryAdapterDe.filter(searchView.getText().toString(), entryAdapterDe);
-            entryList.setAdapter(resultEntryAdapterDe);
-            resultEntryAdapterDe.notifyDataSetChanged();
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        query = searchView.getText().toString();
+        if (!query.equals("")) {
+            return new CursorLoader(
+                    this,
+                    EntryContentProvider.CONTENT_URI,
+                    EntryContract.projection,
+                    EntryContract.SELECTION_SEARCH,
+                    EntryContract.searchArgs(query),
+                    EntryContract.DEFAULT_SORTORDER
+            );
         }
+        return new CursorLoader(
+                this,
+                EntryContentProvider.CONTENT_URI,
+                EntryContract.projection,
+                EntryContract.DEFAULT_SELECTION,
+                EntryContract.DEFAULT_SELECTION_ARGS,
+                EntryContract.DEFAULT_SORTORDER
+        );
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        if (lang.equals("en")) {
+            entryCursorAdapterEn.swapCursor(data);
+        } else if (lang.equals("de")) {
+            entryCursorAdapterDe.swapCursor(data);
+        }
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        entryCursorAdapterDe.swapCursor(null);
+        entryCursorAdapterEn.swapCursor(null);
     }
 
     class RetrieveFeedTask extends AsyncTask<String, Void, Void> {
@@ -116,7 +162,7 @@ public class MainActivity extends AppCompatActivity {
                 XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
                 factory.setNamespaceAware(true);
                 XmlPullParser xpp = factory.newPullParser();
-                DicEntry dicEntry = null;
+                ContentValues values = null;
                 int eventType = -1;
 
                 InputStream ins = getResources().openRawResource(R.raw.deu_eng);
@@ -126,33 +172,31 @@ public class MainActivity extends AppCompatActivity {
 
                     if (eventType == XmlPullParser.START_TAG) {
                         if (xpp.getName().equalsIgnoreCase("orth")) {
-                            dicEntry = new DicEntry();
-                            dicEntry.title = xpp.nextText();
+                            values = new ContentValues();
+                            values.put(EntryContract.DbEntry.COLUMN_Title, xpp.nextText());
                         }
                         if (xpp.getName().equalsIgnoreCase("quote")) {
-                            dicEntry.body = xpp.nextText();
-                            entryAdapterEn.addItem(dicEntry);
+                            values.put(EntryContract.DbEntry.COLUMN_Body, xpp.nextText());
+                            // @todo de-en database
+                            getContentResolver().insert(EntryContentProvider.CONTENT_URI, values);
                         }
                     }
                     eventType = xpp.next();
                 }
-                entryAdapterEn.sort();
 
                 ins = getResources().openRawResource(R.raw.openthesaurus);
                 String[] str = readTextFile(ins).split(getString(R.string.rowsplit));
                 for (int i=0; i<str.length; i++) {
-                    dicEntry = new DicEntry();
                     if (str[i].trim().length() == 0) continue;
                     if (str[i].startsWith(getString(R.string.ignoreline))) continue;
                     String[] line = str[i].split(getString(R.string.columnsplit));
-                    dicEntry.title = line[0];
                     str[i] = str[i].replace(line[0]+getString(R.string.columnsplit) , "");
-                    dicEntry.body = str[i].replace(getString(R.string.columnsplit), getString(R.string.columnsplitReplace));
-                    entryAdapterDe.addItem(dicEntry);
+                    values = new ContentValues();
+                    values.put(EntryContract.DbEntry.COLUMN_Title, line[0]);
+                    values.put(EntryContract.DbEntry.COLUMN_Body, str[i].replace(getString(R.string.columnsplit), getString(R.string.columnsplitReplace)));
+                    // @todo de database
+                    getContentResolver().insert(EntryContentProvider.CONTENT_URI, values);
                 }
-                entryAdapterDe.sort();
-
-
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -163,8 +207,9 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
-            entryAdapterDe.notifyDataSetChanged();
-            entryAdapterEn.notifyDataSetChanged();
+            entryCursorAdapterDe.notifyDataSetChanged();
+            //entryCursorAdapterEn.notifyDataSetChanged();
+            Toast.makeText(getApplicationContext(), "import done", Toast.LENGTH_LONG).show();
         }
     }
 
