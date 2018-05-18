@@ -1,3 +1,5 @@
+<p align="center"><img src="logo/1024.png" alt="offlineTranslator" height="200px"></p>
+
 # offline Translator
 
 this is a very slow starting simple de-eng, eng-de offline translator using two big
