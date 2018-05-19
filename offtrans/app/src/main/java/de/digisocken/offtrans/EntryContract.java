@@ -35,6 +35,7 @@ public class EntryContract {
 
         public static final String COLUMN_Title = "e_title";
         public static final String COLUMN_Body = "e_body";
+        public static final String COLUMN_Hint = "e_hint";
     }
 
     // Useful SQL query parts
@@ -42,8 +43,8 @@ public class EntryContract {
     private static final String INTEGER_TYPE = " INTEGER";
     private static final String COMMA_SEP = ",";
 
-    public static final String DEFAULT_SELECTION = "";
-    public static final String[] DEFAULT_SELECTION_ARGS = {};
+    public static final String DEFAULT_SELECTION = DbEntry.COLUMN_Hint +"=?";
+    public static final String[] DEFAULT_SELECTION_ARGS = {"de"};
     public static final String DEFAULT_SORTORDER = DbEntry.COLUMN_Title +" ASC";
 
     // Useful SQL queries
@@ -51,7 +52,8 @@ public class EntryContract {
             "CREATE TABLE " + DbEntry.TABLE_NAME + " (" +
                     DbEntry._ID + INTEGER_TYPE + " PRIMARY KEY" + COMMA_SEP +
                     DbEntry.COLUMN_Title + TEXT_TYPE + COMMA_SEP +
-                    DbEntry.COLUMN_Body + TEXT_TYPE + " )";
+                    DbEntry.COLUMN_Body + TEXT_TYPE + COMMA_SEP +
+                    DbEntry.COLUMN_Hint + TEXT_TYPE + " )";
 
     public static final String SQL_DELETE_ENTRIES =
             "DROP TABLE IF EXISTS " + DbEntry.TABLE_NAME;
@@ -59,14 +61,16 @@ public class EntryContract {
     public static final String[] projection = {
             DbEntry._ID,
             DbEntry.COLUMN_Title,
-            DbEntry.COLUMN_Body
+            DbEntry.COLUMN_Body,
+            DbEntry.COLUMN_Hint
     };
 
     public static final String SELECTION_SEARCH =
-            DbEntry.COLUMN_Title + " LIKE ? OR " +
-                    DbEntry.COLUMN_Body + " LIKE ?";
+            "(" + DbEntry.COLUMN_Title + " LIKE ? OR " +
+                    DbEntry.COLUMN_Body + " LIKE ? ) AND "+
+            DbEntry.COLUMN_Hint + " LIKE ?";
 
-    public static String[] searchArgs(String query) {
-        return new String[]{"%"+query+"%", "%"+query+"%"};
+    public static String[] searchArgs(String query, String hint) {
+        return new String[]{"%"+query+"%", "%"+query+"%", hint};
     }
 }

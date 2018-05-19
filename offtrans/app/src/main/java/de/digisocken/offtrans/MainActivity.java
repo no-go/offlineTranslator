@@ -1,15 +1,11 @@
 package de.digisocken.offtrans;
 
-import android.app.ListActivity;
-import android.app.ListFragment;
 import android.app.LoaderManager;
 import android.content.ContentValues;
 import android.content.CursorLoader;
-import android.content.Intent;
 import android.content.Loader;
 import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -17,6 +13,7 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
@@ -24,8 +21,16 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserFactory;
+import com.ximpleware.AutoPilot;
+import com.ximpleware.NavException;
+import com.ximpleware.ParseException;
+import com.ximpleware.PilotException;
+import com.ximpleware.VTDGen;
+import com.ximpleware.VTDNav;
+import com.ximpleware.XPathEvalException;
+import com.ximpleware.XPathParseException;
+
+import org.apache.commons.io.IOUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -34,8 +39,7 @@ import java.io.InputStream;
 public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
     public static String query = "";
-    private EntryCursorAdapter entryCursorAdapterDe;
-    private EntryCursorAdapter entryCursorAdapterEn;
+    private EntryCursorAdapter entryCursorAdapter;
     private ListView entryList;
     private EditText searchView;
     private String lang = "de";
@@ -48,13 +52,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             switch (item.getItemId()) {
                 case R.id.navigation_de:
                     lang = "de";
-                    entryList.setAdapter(entryCursorAdapterDe);
-                    entryCursorAdapterDe.notifyDataSetChanged();
+                    entryList.setAdapter(entryCursorAdapter);
+                    entryCursorAdapter.notifyDataSetChanged();
                     return true;
                 case R.id.navigation_de_en:
-                    lang = "en";
-                    entryList.setAdapter(entryCursorAdapterEn);
-                    entryCursorAdapterEn.notifyDataSetChanged();
+                    lang = "deu_eng";
+                    entryList.setAdapter(entryCursorAdapter);
+                    entryCursorAdapter.notifyDataSetChanged();
                     return true;
             }
             return false;
@@ -85,11 +89,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         searchView = (EditText) findViewById(R.id.searchView);
 
         getLoaderManager().initLoader(0, null, this);
-        entryCursorAdapterDe = new EntryCursorAdapter(this, null, 0);
+        entryCursorAdapter = new EntryCursorAdapter(this, null, 0);
 
         entryList = (ListView) findViewById(R.id.dicList);
         entryList.setEmptyView(findViewById(android.R.id.empty));
-        entryList.setAdapter(entryCursorAdapterDe);
+        entryList.setAdapter(entryCursorAdapter);
 
         entryList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -126,7 +130,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     EntryContentProvider.CONTENT_URI,
                     EntryContract.projection,
                     EntryContract.SELECTION_SEARCH,
-                    EntryContract.searchArgs(query),
+                    EntryContract.searchArgs(query, lang),
                     EntryContract.DEFAULT_SORTORDER
             );
         }
@@ -142,73 +146,111 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        if (lang.equals("en")) {
-            entryCursorAdapterEn.swapCursor(data);
-        } else if (lang.equals("de")) {
-            entryCursorAdapterDe.swapCursor(data);
-        }
+        entryCursorAdapter.swapCursor(data);
     }
 
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
-        entryCursorAdapterDe.swapCursor(null);
-        entryCursorAdapterEn.swapCursor(null);
+        entryCursorAdapter.swapCursor(null);
     }
 
     class RetrieveFeedTask extends AsyncTask<String, Void, Void> {
         protected Void doInBackground(String... dummy) {
+            long inserts = 0;
+            ContentValues values = null;
+
+            VTDGen vtd = new VTDGen();
+            InputStream ins = getResources().openRawResource(R.raw.deu_eng);
             try {
-
-                XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
-                factory.setNamespaceAware(true);
-                XmlPullParser xpp = factory.newPullParser();
-                ContentValues values = null;
-                int eventType = -1;
-
-                InputStream ins = getResources().openRawResource(R.raw.deu_eng);
-                xpp.setInput(ins, null);
-                eventType = xpp.getEventType();
-                while (eventType != XmlPullParser.END_DOCUMENT) {
-
-                    if (eventType == XmlPullParser.START_TAG) {
-                        if (xpp.getName().equalsIgnoreCase("orth")) {
-                            values = new ContentValues();
-                            values.put(EntryContract.DbEntry.COLUMN_Title, xpp.nextText());
-                        }
-                        if (xpp.getName().equalsIgnoreCase("quote")) {
-                            values.put(EntryContract.DbEntry.COLUMN_Body, xpp.nextText());
-                            // @todo de-en database
-                            getContentResolver().insert(EntryContentProvider.CONTENT_URI, values);
-                        }
-                    }
-                    eventType = xpp.next();
-                }
-
-                ins = getResources().openRawResource(R.raw.openthesaurus);
-                String[] str = readTextFile(ins).split(getString(R.string.rowsplit));
-                for (int i=0; i<str.length; i++) {
-                    if (str[i].trim().length() == 0) continue;
-                    if (str[i].startsWith(getString(R.string.ignoreline))) continue;
-                    String[] line = str[i].split(getString(R.string.columnsplit));
-                    str[i] = str[i].replace(line[0]+getString(R.string.columnsplit) , "");
-                    values = new ContentValues();
-                    values.put(EntryContract.DbEntry.COLUMN_Title, line[0]);
-                    values.put(EntryContract.DbEntry.COLUMN_Body, str[i].replace(getString(R.string.columnsplit), getString(R.string.columnsplitReplace)));
-                    // @todo de database
-                    getContentResolver().insert(EntryContentProvider.CONTENT_URI, values);
-                }
-
-            } catch (Exception e) {
+                vtd.setDoc(IOUtils.toByteArray(ins));
+                vtd.parse(true);
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ParseException e) {
                 e.printStackTrace();
             }
+            VTDNav vn = vtd.getNav();
+            AutoPilot ap = new AutoPilot(vn);
+            AutoPilot ap1 = new AutoPilot(vn);
+            AutoPilot ap2 = new AutoPilot(vn);
+            try {
+                ap.selectXPath("/TEI/text/body/entry");
+                ap1.selectXPath("form");
+                ap2.selectXPath("sense/cit");
+                while (ap.evalXPath() != -1) {
+                    vn.push();
+                    while (ap1.evalXPath() != -1) {
+                        if (vn.toElement(VTDNav.FIRST_CHILD, "orth")) {
+                            values = new ContentValues();
+                            values.put(
+                                    EntryContract.DbEntry.COLUMN_Title,
+                                    vn.toNormalizedString(vn.getText())
+                            );
+                        }
+                    }
+                    ap1.resetXPath();
+                    vn.pop();
+                    vn.push();
+                    while (ap2.evalXPath() != -1) {
+                        if (vn.toElement(VTDNav.FIRST_CHILD, "quote")) {
+                            if (values != null && values.size() == 1) {
+                                values.put(
+                                        EntryContract.DbEntry.COLUMN_Body,
+                                        vn.toNormalizedString(vn.getText())
+                                );
+                                values.put(
+                                        EntryContract.DbEntry.COLUMN_Hint,
+                                        "deu_eng"
+                                );
+                                getContentResolver().insert(EntryContentProvider.CONTENT_URI, values);
+                                inserts++;
+                                if (inserts % 1000 == 0) {
+                                    Log.v("w trans", "Thesaurus importing " + Long.toString(inserts) + " ...");
+                                }
+                            }
+                        }
+                    }
+                    values = null;
+                    ap2.resetXPath();
+                    vn.pop();
+                }
+            } catch (XPathParseException e) {
+                e.printStackTrace();
+            } catch (PilotException e) {
+                e.printStackTrace();
+            } catch (NavException e) {
+                e.printStackTrace();
+            } catch (XPathEvalException e) {
+                e.printStackTrace();
+            }
+
+            inserts = 0;
+
+            ins = getResources().openRawResource(R.raw.openthesaurus);
+            String[] str = readTextFile(ins).split(getString(R.string.rowsplit));
+            for (int i=0; i<str.length; i++) {
+                if (str[i].trim().length() == 0) continue;
+                if (str[i].startsWith(getString(R.string.ignoreline))) continue;
+                String[] line = str[i].split(getString(R.string.columnsplit));
+                str[i] = str[i].replace(line[0]+getString(R.string.columnsplit) , "");
+                values = new ContentValues();
+                values.put(EntryContract.DbEntry.COLUMN_Title, line[0]);
+                values.put(EntryContract.DbEntry.COLUMN_Body, str[i].replace(getString(R.string.columnsplit), getString(R.string.columnsplitReplace)));
+                values.put(EntryContract.DbEntry.COLUMN_Hint, "de");
+                getContentResolver().insert(EntryContentProvider.CONTENT_URI, values);
+                inserts++;
+                if (inserts%1000 == 0) {
+                    Log.v("w trans", "Thesaurus importing "+Long.toString(inserts)+" ...");
+                }
+            }
+
             return null;
         }
 
         @Override
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
-            entryCursorAdapterDe.notifyDataSetChanged();
-            //entryCursorAdapterEn.notifyDataSetChanged();
+            entryCursorAdapter.notifyDataSetChanged();
             Toast.makeText(getApplicationContext(), "import done", Toast.LENGTH_LONG).show();
         }
     }
