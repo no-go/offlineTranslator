@@ -1,8 +1,11 @@
 package de.digisocken.offtrans;
 
 import android.content.ContentProvider;
+import android.content.ContentProviderOperation;
+import android.content.ContentProviderResult;
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.OperationApplicationException;
 import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -10,10 +13,13 @@ import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
+import android.util.Log;
+
+import java.util.ArrayList;
 
 public class EntryContentProvider extends ContentProvider {
 
-    public static final String AUTHORITY = "de.digisocken.offtrans.contentprovider";
+
     public static final String CONTENT_TYPE = ContentResolver.CURSOR_DIR_BASE_TYPE + "/entries";
     public static final String CONTENT_ITEM_TYPE = ContentResolver.CURSOR_ITEM_BASE_TYPE + "/entry";
 
@@ -26,15 +32,15 @@ public class EntryContentProvider extends ContentProvider {
     private static final String BASE_PATH = "entries";
 
     public static final Uri CONTENT_URI = Uri.parse(
-            "content://" + AUTHORITY
+            "content://" + EntryContract.AUTHORITY
             + "/" + BASE_PATH
     );
 
     private static final UriMatcher sURIMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
     static {
-        sURIMatcher.addURI(AUTHORITY, BASE_PATH, ENTRIES);
-        sURIMatcher.addURI(AUTHORITY, BASE_PATH + "/#", ENTRY_ID);
+        sURIMatcher.addURI(EntryContract.AUTHORITY, BASE_PATH, ENTRIES);
+        sURIMatcher.addURI(EntryContract.AUTHORITY, BASE_PATH + "/#", ENTRY_ID);
     }
 
     @Override
@@ -177,5 +183,30 @@ public class EntryContentProvider extends ContentProvider {
         }
         getContext().getContentResolver().notifyChange(uri, null);
         return rowsUpdated;
+    }
+
+    @Override
+    public ContentProviderResult[] applyBatch(
+            ArrayList<ContentProviderOperation> operations) {
+        ContentProviderResult[] result = new ContentProviderResult[operations.size()];
+        int i = 0;
+        // Opens the database object in "write" mode.
+        SQLiteDatabase db = _database.getWritableDatabase();
+        // Begin a transaction
+        db.beginTransaction();
+        try {
+            for (ContentProviderOperation operation : operations) {
+                // Chain the result for back references
+                result[i++] = operation.apply(this, result, i);
+            }
+
+            db.setTransactionSuccessful();
+        } catch (OperationApplicationException e) {
+            Log.d("batch failed:", e.getLocalizedMessage());
+        } finally {
+            db.endTransaction();
+        }
+
+        return result;
     }
 }

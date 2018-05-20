@@ -1,13 +1,17 @@
 package de.digisocken.offtrans;
 
 import android.app.LoaderManager;
+import android.content.ContentProviderOperation;
 import android.content.ContentValues;
 import android.content.CursorLoader;
 import android.content.Loader;
+import android.content.OperationApplicationException;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
@@ -35,6 +39,7 @@ import org.apache.commons.io.IOUtils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
@@ -42,7 +47,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     private EntryCursorAdapter entryCursorAdapter;
     private ListView entryList;
     private EditText searchView;
-    private String lang = "de";
+    public static String lang = "de";
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -52,13 +57,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             switch (item.getItemId()) {
                 case R.id.navigation_de:
                     lang = "de";
-                    entryList.setAdapter(entryCursorAdapter);
-                    entryCursorAdapter.notifyDataSetChanged();
+                    search(searchView);
                     return true;
                 case R.id.navigation_de_en:
                     lang = "deu_eng";
-                    entryList.setAdapter(entryCursorAdapter);
-                    entryCursorAdapter.notifyDataSetChanged();
+                    search(searchView);
                     return true;
             }
             return false;
@@ -89,31 +92,28 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         searchView = (EditText) findViewById(R.id.searchView);
 
         getLoaderManager().initLoader(0, null, this);
-        entryCursorAdapter = new EntryCursorAdapter(this, null, 0);
-
         entryList = (ListView) findViewById(R.id.dicList);
-        entryList.setEmptyView(findViewById(android.R.id.empty));
-        entryList.setAdapter(entryCursorAdapter);
-
+/*
         entryList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                /**
-                 * @TODO !!!
-                 */
-                /*
                 DbEntry item = (DbEntry) adapterView.getItemAtPosition(i);
                 String msg = item.title + "\n\n" + item.body;
                 Intent myIntent = new Intent(MainActivity.this, EditActivity.class);
                 myIntent.putExtra("msg", msg);
                 startActivity(myIntent);
-                */
             }
         });
+*/
         SharedPreferences mPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         if (!mPreferences.contains("initial_read")) {
             mPreferences.edit().putBoolean("initial_read", true).commit();
             new RetrieveFeedTask().execute();
+        } else {
+            entryCursorAdapter = new EntryCursorAdapter(this, null, 0);
+            entryList.setEmptyView(findViewById(android.R.id.empty));
+            entryList.setAdapter(entryCursorAdapter);
+            entryCursorAdapter.notifyDataSetChanged();
         }
     }
 
@@ -124,7 +124,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
         query = searchView.getText().toString();
-        if (!query.equals("")) {
+        //if (!query.equals("")) {
             return new CursorLoader(
                     this,
                     EntryContentProvider.CONTENT_URI,
@@ -133,7 +133,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     EntryContract.searchArgs(query, lang),
                     EntryContract.DEFAULT_SORTORDER
             );
-        }
+        //}
+        /*
         return new CursorLoader(
                 this,
                 EntryContentProvider.CONTENT_URI,
@@ -142,25 +143,63 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 EntryContract.DEFAULT_SELECTION_ARGS,
                 EntryContract.DEFAULT_SORTORDER
         );
+        */
     }
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        entryCursorAdapter.swapCursor(data);
+        if (entryCursorAdapter != null) {
+            entryCursorAdapter.swapCursor(data);
+        }
     }
 
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
-        entryCursorAdapter.swapCursor(null);
+        if (entryCursorAdapter != null) {
+            entryCursorAdapter.swapCursor(null);
+        }
     }
 
     class RetrieveFeedTask extends AsyncTask<String, Void, Void> {
         protected Void doInBackground(String... dummy) {
             long inserts = 0;
             ContentValues values = null;
+            InputStream ins = null;
+            ArrayList<ContentProviderOperation> ops = null;
 
+            ops = new ArrayList<ContentProviderOperation>();
+            ins = getResources().openRawResource(R.raw.openthesaurus);
+            String[] str = readTextFile(ins).split(getString(R.string.rowsplit));
+            try {
+
+                for (int i=0; i<str.length; i++) {
+                    if (str[i].trim().length() == 0) continue;
+                    if (str[i].startsWith(getString(R.string.ignoreline))) continue;
+                    String[] line = str[i].split(getString(R.string.columnsplit));
+                    str[i] = str[i].replace(line[0] + getString(R.string.columnsplit), "");
+                    values = new ContentValues();
+                    values.put(EntryContract.DbEntry.COLUMN_Title, line[0]);
+                    values.put(EntryContract.DbEntry.COLUMN_Body, str[i].replace(getString(R.string.columnsplit), getString(R.string.columnsplitReplace)));
+                    values.put(EntryContract.DbEntry.COLUMN_Hint, "de");
+                    ops.add(ContentProviderOperation.newInsert(
+                            EntryContentProvider.CONTENT_URI).withValues(values).build()
+                    );
+                    inserts++;
+                    if (inserts % 2000 == 0) {
+                        Log.v("w saurus", "importing " + Long.toString(inserts) + " ...");
+                    }
+                }
+                getContentResolver().applyBatch(EntryContract.AUTHORITY, ops);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            } catch (OperationApplicationException e) {
+                e.printStackTrace();
+            }
+
+            inserts = 0;
+            ops = new ArrayList<ContentProviderOperation>();
             VTDGen vtd = new VTDGen();
-            InputStream ins = getResources().openRawResource(R.raw.deu_eng);
+            ins = getResources().openRawResource(R.raw.deu_eng);
             try {
                 vtd.setDoc(IOUtils.toByteArray(ins));
                 vtd.parse(true);
@@ -202,10 +241,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                         EntryContract.DbEntry.COLUMN_Hint,
                                         "deu_eng"
                                 );
-                                getContentResolver().insert(EntryContentProvider.CONTENT_URI, values);
+                                ops.add(ContentProviderOperation.newInsert(
+                                        EntryContentProvider.CONTENT_URI).withValues(values).build()
+                                );
                                 inserts++;
-                                if (inserts % 1000 == 0) {
-                                    Log.v("w trans", "Thesaurus importing " + Long.toString(inserts) + " ...");
+                                if (inserts % 2000 == 0) {
+                                    Log.v("w trans", "importing " + Long.toString(inserts) + " ...");
                                 }
                             }
                         }
@@ -224,24 +265,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 e.printStackTrace();
             }
 
-            inserts = 0;
-
-            ins = getResources().openRawResource(R.raw.openthesaurus);
-            String[] str = readTextFile(ins).split(getString(R.string.rowsplit));
-            for (int i=0; i<str.length; i++) {
-                if (str[i].trim().length() == 0) continue;
-                if (str[i].startsWith(getString(R.string.ignoreline))) continue;
-                String[] line = str[i].split(getString(R.string.columnsplit));
-                str[i] = str[i].replace(line[0]+getString(R.string.columnsplit) , "");
-                values = new ContentValues();
-                values.put(EntryContract.DbEntry.COLUMN_Title, line[0]);
-                values.put(EntryContract.DbEntry.COLUMN_Body, str[i].replace(getString(R.string.columnsplit), getString(R.string.columnsplitReplace)));
-                values.put(EntryContract.DbEntry.COLUMN_Hint, "de");
-                getContentResolver().insert(EntryContentProvider.CONTENT_URI, values);
-                inserts++;
-                if (inserts%1000 == 0) {
-                    Log.v("w trans", "Thesaurus importing "+Long.toString(inserts)+" ...");
-                }
+            try {
+                getContentResolver().applyBatch(EntryContract.AUTHORITY, ops);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            } catch (OperationApplicationException e) {
+                e.printStackTrace();
             }
 
             return null;
@@ -250,6 +279,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         @Override
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
+            entryCursorAdapter = new EntryCursorAdapter(getApplicationContext(), null, 0);
+            entryList.setEmptyView(findViewById(android.R.id.empty));
+            entryList.setAdapter(entryCursorAdapter);
+
             entryCursorAdapter.notifyDataSetChanged();
             Toast.makeText(getApplicationContext(), "import done", Toast.LENGTH_LONG).show();
         }

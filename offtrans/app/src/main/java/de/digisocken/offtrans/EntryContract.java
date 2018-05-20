@@ -30,6 +30,8 @@ import java.util.Locale;
 
 public class EntryContract {
 
+    public static final String AUTHORITY = "de.digisocken.offtrans.contentprovider";
+
     public static class DbEntry implements BaseColumns {
         public static final String TABLE_NAME = "entries";
 
@@ -67,8 +69,8 @@ public class EntryContract {
 
     public static final String SELECTION_SEARCH =
             "(" + DbEntry.COLUMN_Title + " LIKE ? OR " +
-                    DbEntry.COLUMN_Body + " LIKE ? ) AND "+
-            DbEntry.COLUMN_Hint + " LIKE ?";
+                    DbEntry.COLUMN_Body + " LIKE ? ) AND ("+
+            DbEntry.COLUMN_Hint + " = ? )";
 
     public static String[] searchArgs(String query, String hint) {
         return new String[]{"%"+query+"%", "%"+query+"%", hint};
