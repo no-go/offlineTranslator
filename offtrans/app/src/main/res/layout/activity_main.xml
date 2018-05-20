@@ -13,6 +13,7 @@
         android:layout_height="wrap_content">
 
         <RelativeLayout
+            android:background="@color/colorPrimary"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
@@ -20,12 +21,12 @@
                 android:id="@+id/searchView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
                 android:layout_marginBottom="8dp"
+                android:layout_toStartOf="@id/button"
                 android:ems="10"
                 android:text=""
-                android:layout_alignParentStart="true"
-                android:layout_toStartOf="@id/button"
-                android:textColor="@android:color/black" />
+                android:textColor="@android:color/white" />
 
             <Button
                 android:id="@+id/button"
@@ -44,21 +45,29 @@
             android:id="@+id/dicList"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentTop="true"
             tools:layout_editor_absoluteX="0dp"
             tools:layout_editor_absoluteY="0dp" />
 
-        <TextView
-            android:id="@android:id/empty"
+        <LinearLayout
+            android:id="@+id/hintview"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:padding="10dp"
-            android:text="@string/empty"
+            android:orientation="vertical"
             tools:layout_editor_absoluteX="0dp"
-            tools:layout_editor_absoluteY="84dp" />
+            tools:layout_editor_absoluteY="84dp">
+
+            <ProgressBar
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/progressBar"
+                android:indeterminate="true"
+                android:max="100"
+                android:indeterminateOnly="true"
+                android:visibility="visible" />
+
+        </LinearLayout>
     </LinearLayout>
 
     <android.support.design.widget.BottomNavigationView
