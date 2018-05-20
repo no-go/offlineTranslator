@@ -1,12 +1,14 @@
 <resources>
-    <string name="app_name">offline tei file</string>
-    <string name="title_de_eng">deu -> eng</string>
-    <string name="title_eng_de">eng -> deu</string>
-    <string name="title_kur_tur">kur -> tur</string>
+    <string name="app_name">W Tran</string>
+    <string name="title_de">Worte</string>
+    <string name="title_eng">deu-eng</string>
+    <string name="title_kur">kur-deu</string>
+    <string name="title_ara">ara-eng</string>
 
+    <string name="ignoreline">#</string>
+    <string name="rowsplit">\n</string>
     <string name="columnsplit">;</string>
+    <string name="columnsplitReplace">\ ·\ </string>
     <string name="sortReplaceFrom">Ä;Ö;Ü;ä;ö;ü;ß</string>
     <string name="sortReplaceTo">Ae;Oe;Ue;ae;oe;ue;ss</string>
-
-    <string name="empty">...</string>
 </resources>

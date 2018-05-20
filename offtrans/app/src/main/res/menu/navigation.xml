@@ -2,18 +2,23 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
-        android:id="@+id/navigation_de_en"
-        android:icon="@drawable/en_flag"
-        android:title="@string/title_de_eng" />
+        android:id="@+id/navigation_deu"
+        android:icon="@drawable/deu_flag"
+        android:title="@string/title_de" />
 
     <item
-        android:id="@+id/navigation_en_de"
-        android:icon="@drawable/de_flag"
-        android:title="@string/title_eng_de" />
+        android:id="@+id/navigation_eng"
+        android:icon="@drawable/eng_flag"
+        android:title="@string/title_eng" />
 
     <item
-        android:id="@+id/navigation_kur_tur"
+        android:id="@+id/navigation_ara"
+        android:icon="@drawable/ara_flag"
+        android:title="@string/title_ara" />
+
+    <item
+        android:id="@+id/navigation_kur"
         android:icon="@drawable/kur_flag"
-        android:title="@string/title_kur_tur" />
+        android:title="@string/title_kur" />
 
 </menu>

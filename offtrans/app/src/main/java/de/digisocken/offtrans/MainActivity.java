@@ -1,32 +1,89 @@
 package de.digisocken.offtrans;
 
+import android.app.LoaderManager;
+import android.content.ContentProviderOperation;
+import android.content.ContentValues;
+import android.content.CursorLoader;
+import android.content.Intent;
+import android.content.Loader;
+import android.content.OperationApplicationException;
+import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.RemoteException;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
+import android.util.Pair;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.Toast;
 
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserFactory;
+import com.ximpleware.AutoPilot;
+import com.ximpleware.NavException;
+import com.ximpleware.ParseException;
+import com.ximpleware.PilotException;
+import com.ximpleware.VTDGen;
+import com.ximpleware.VTDNav;
+import com.ximpleware.XPathEvalException;
+import com.ximpleware.XPathParseException;
 
+import org.apache.commons.io.IOUtils;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
-    private EntryAdapter entryAdapterDe;
-    private EntryAdapter resultEntryAdapterDe;
-    private EntryAdapter entryAdapterEn;
-    private EntryAdapter resultEntryAdapterEn;
-    private EntryAdapter entryAdapterKur;
-    private EntryAdapter resultEntryAdapterKur;
+    public static String query = "";
+    private SharedPreferences mPreferences;
+    private EntryCursorAdapter entryCursorAdapter;
     private ListView entryList;
     private EditText searchView;
-    private String lang = "de";
+    private LinearLayout hintview;
+    public static String lang = "de";
+    private long inserts = 0;
+    private float maxEntries = 37583+52996+81621+20000;
+
+    private Handler handler = new Handler();
+
+    private final Runnable updateHintThread = new Runnable() {
+        public void run() {
+            try {
+                ActionBar ab = getSupportActionBar();
+                if (ab != null && inserts >= 0) {
+                    String dots = "";
+                    if (inserts % 100 == 0) dots = "...";
+
+                    ab.setTitle(String.format(Locale.GERMAN,
+                            "  %s - import: %.0f%% %s",
+                            getString(R.string.app_name),
+                            (100*(float)inserts/maxEntries),
+                            dots
+                    ));
+                    handler.postDelayed(this, 500);
+                } else {
+                    ab.setTitle("  " + getString(R.string.app_name));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    };
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -34,20 +91,21 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public boolean onNavigationItemSelected(@NonNull MenuItem item) {
             switch (item.getItemId()) {
-                case R.id.navigation_de_en:
+                case R.id.navigation_deu:
                     lang = "de";
-                    entryList.setAdapter(entryAdapterDe);
-                    entryAdapterDe.notifyDataSetChanged();
+                    search(searchView);
                     return true;
-                case R.id.navigation_en_de:
-                    lang = "en";
-                    entryList.setAdapter(entryAdapterEn);
-                    entryAdapterEn.notifyDataSetChanged();
+                case R.id.navigation_eng:
+                    lang = "deu_eng";
+                    search(searchView);
                     return true;
-                case R.id.navigation_kur_tur:
-                    lang = "kur";
-                    entryList.setAdapter(entryAdapterKur);
-                    entryAdapterKur.notifyDataSetChanged();
+                case R.id.navigation_ara:
+                    lang = "ara_eng";
+                    search(searchView);
+                    return true;
+                case R.id.navigation_kur:
+                    lang = "kur_deu";
+                    search(searchView);
                     return true;
             }
             return false;
@@ -67,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
                 ab.setDisplayUseLogoEnabled(true);
                 ab.setLogo(R.mipmap.ic_launcher);
                 ab.setTitle("  " + getString(R.string.app_name));
+                ab.setElevation(0);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -76,110 +135,200 @@ public class MainActivity extends AppCompatActivity {
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
 
         searchView = (EditText) findViewById(R.id.searchView);
+        hintview = (LinearLayout) findViewById(R.id.hintview);
 
-        entryAdapterDe = new EntryAdapter(this);
-        entryAdapterEn = new EntryAdapter(this);
-        entryAdapterKur = new EntryAdapter(this);
+        getLoaderManager().initLoader(0, null, this);
         entryList = (ListView) findViewById(R.id.dicList);
-        entryList.setEmptyView(findViewById(android.R.id.empty));
-        entryList.setAdapter(entryAdapterDe);
+        entryCursorAdapter = new EntryCursorAdapter(this, null, 0);
+        entryList.setAdapter(entryCursorAdapter);
 
-        resultEntryAdapterDe = new EntryAdapter(this);
-        resultEntryAdapterEn = new EntryAdapter(this);
-        resultEntryAdapterKur = new EntryAdapter(this);
-        new RetrieveFeedTask().execute();
+
+        entryList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int position, long l) {
+                Cursor c = (Cursor) entryCursorAdapter.getItem(position);
+                String title = c.getString(c.getColumnIndex(EntryContract.DbEntry.COLUMN_Title));
+                String body = c.getString(c.getColumnIndex(EntryContract.DbEntry.COLUMN_Body));
+
+                String msg = title + "\n\n" + body;
+                Intent myIntent = new Intent(MainActivity.this, EditActivity.class);
+                myIntent.putExtra("msg", msg);
+                startActivity(myIntent);
+            }
+        });
+
+        mPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        if (!mPreferences.contains("reads")) {
+            mPreferences.edit().putLong("reads", 0).commit();
+            handler.postDelayed(updateHintThread, 500);
+            new RetrieveFeedTask().execute();
+            // @todo check, if not enough is imported
+        } else {
+            entryCursorAdapter.notifyDataSetChanged();
+        }
     }
 
     public void search(View view) {
-        if (lang.equals("en")) {
-            resultEntryAdapterEn.filter(searchView.getText().toString(), entryAdapterEn);
-            entryList.setAdapter(resultEntryAdapterEn);
-            resultEntryAdapterEn.notifyDataSetChanged();
+        entryList.setVisibility(View.GONE);
+        hintview.setVisibility(View.VISIBLE);
+        getLoaderManager().restartLoader(0, null, this);
+    }
 
-        } else if (lang.equals("de")) {
-            resultEntryAdapterDe.filter(searchView.getText().toString(), entryAdapterDe);
-            entryList.setAdapter(resultEntryAdapterDe);
-            resultEntryAdapterDe.notifyDataSetChanged();
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        query = searchView.getText().toString();
+        hintview.setVisibility(View.VISIBLE);
+        return new CursorLoader(
+                this,
+                EntryContentProvider.CONTENT_URI,
+                EntryContract.projection,
+                EntryContract.SELECTION_SEARCH,
+                EntryContract.searchArgs(query, lang),
+                EntryContract.DEFAULT_SORTORDER
+        );
+    }
 
-        } else if (lang.equals("kur")) {
-            resultEntryAdapterKur.filter(searchView.getText().toString(), entryAdapterKur);
-            entryList.setAdapter(resultEntryAdapterKur);
-            resultEntryAdapterKur.notifyDataSetChanged();
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        if (entryCursorAdapter != null) {
+            entryCursorAdapter.swapCursor(data);
+            entryList.setVisibility(View.VISIBLE);
+            hintview.setVisibility(View.INVISIBLE);
+        }
+    }
 
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        if (entryCursorAdapter != null) {
+            entryCursorAdapter.swapCursor(null);
+            entryList.setVisibility(View.VISIBLE);
+            hintview.setVisibility(View.INVISIBLE);
         }
     }
 
     class RetrieveFeedTask extends AsyncTask<String, Void, Void> {
         protected Void doInBackground(String... dummy) {
+            ContentValues values = null;
+            InputStream ins = null;
+            ArrayList<ContentProviderOperation> ops = null;
+
+            long lastinserts = mPreferences.getLong("reads", 0);
+
+
+            ins = getResources().openRawResource(R.raw.openthesaurus);
+            ops = new ArrayList<ContentProviderOperation>();
+            String[] str = readTextFile(ins).split(getString(R.string.rowsplit));
             try {
 
-                // @todo just repeat the code is a bit strange!?
-
-                XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
-                factory.setNamespaceAware(true);
-                XmlPullParser xpp = factory.newPullParser();
-                DicEntry dicEntry = null;
-                int eventType = -1;
-
-                InputStream ins = getResources().openRawResource(R.raw.deu_eng);
-                xpp.setInput(ins, null);
-                eventType = xpp.getEventType();
-                while (eventType != XmlPullParser.END_DOCUMENT) {
-
-                    if (eventType == XmlPullParser.START_TAG) {
-                        if (xpp.getName().equalsIgnoreCase("orth")) {
-                            dicEntry = new DicEntry();
-                            dicEntry.title = xpp.nextText();
-                        }
-                        if (xpp.getName().equalsIgnoreCase("quote")) {
-                            dicEntry.body = xpp.nextText();
-                            entryAdapterDe.addItem(dicEntry);
-                        }
+                for (int i=0; i<str.length; i++) {
+                    if (inserts < lastinserts) {
+                        inserts++;
+                        continue;
                     }
-                    eventType = xpp.next();
-                }
-                entryAdapterDe.sort();
-
-                ins = getResources().openRawResource(R.raw.eng_deu);
-                xpp.setInput(ins, null);
-                eventType = xpp.getEventType();
-                while (eventType != XmlPullParser.END_DOCUMENT) {
-
-                    if (eventType == XmlPullParser.START_TAG) {
-                        if (xpp.getName().equalsIgnoreCase("orth")) {
-                            dicEntry = new DicEntry();
-                            dicEntry.title = xpp.nextText();
-                        }
-                        if (xpp.getName().equalsIgnoreCase("quote")) {
-                            dicEntry.body = xpp.nextText();
-                            entryAdapterEn.addItem(dicEntry);
-                        }
+                    inserts++;
+                    if (str[i].trim().length() == 0) continue;
+                    if (str[i].startsWith(getString(R.string.ignoreline))) continue;
+                    String[] line = str[i].split(getString(R.string.columnsplit));
+                    str[i] = str[i].replace(line[0] + getString(R.string.columnsplit), "");
+                    values = new ContentValues();
+                    values.put(EntryContract.DbEntry.COLUMN_Title, line[0]);
+                    values.put(EntryContract.DbEntry.COLUMN_Body, str[i].replace(getString(R.string.columnsplit), getString(R.string.columnsplitReplace)));
+                    values.put(EntryContract.DbEntry.COLUMN_Hint, "de");
+                    ops.add(ContentProviderOperation.newInsert(
+                            EntryContentProvider.CONTENT_URI).withValues(values).build()
+                    );
+                    if (inserts % 3000 == 0) {
+                        Log.v("w saurus", "importing " + Long.toString(inserts) + " ...");
+                        getContentResolver().applyBatch(EntryContract.AUTHORITY, ops);
+                        ops = new ArrayList<ContentProviderOperation>();
+                        mPreferences.edit().putLong("reads", inserts).apply();
                     }
-                    eventType = xpp.next();
                 }
-                entryAdapterEn.sort();
-
-                ins = getResources().openRawResource(R.raw.kur_tur);
-                xpp.setInput(ins, null);
-                eventType = xpp.getEventType();
-                while (eventType != XmlPullParser.END_DOCUMENT) {
-
-                    if (eventType == XmlPullParser.START_TAG) {
-                        if (xpp.getName().equalsIgnoreCase("orth")) {
-                            dicEntry = new DicEntry();
-                            dicEntry.title = xpp.nextText();
-                        }
-                        if (xpp.getName().equalsIgnoreCase("quote")) {
-                            dicEntry.body = xpp.nextText();
-                            entryAdapterKur.addItem(dicEntry);
-                        }
-                    }
-                    eventType = xpp.next();
-                }
-                entryAdapterKur.sort();
-
-            } catch (Exception e) {
+                getContentResolver().applyBatch(EntryContract.AUTHORITY, ops);
+                mPreferences.edit().putLong("reads", inserts).apply();
+            } catch (RemoteException e) {
                 e.printStackTrace();
+            } catch (OperationApplicationException e) {
+                e.printStackTrace();
+            }
+
+
+            ArrayList<Pair<Integer, String>> teis = new ArrayList<>();
+            teis.add(new Pair<>(R.raw.deu_eng, "deu_eng"));
+            teis.add(new Pair<>(R.raw.ara_eng, "ara_eng"));
+            teis.add(new Pair<>(R.raw.kur_deu, "kur_deu"));
+
+            for (Pair<Integer,String> tei : teis) {
+                if (inserts < lastinserts) {
+                    inserts++;
+                    continue;
+                }
+                ins = getResources().openRawResource(tei.first);
+                ops = new ArrayList<ContentProviderOperation>();
+                VTDGen vtd = new VTDGen();
+                try {
+                    vtd.setDoc(IOUtils.toByteArray(ins));
+                    vtd.parse(true);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+                VTDNav vn = vtd.getNav();
+                AutoPilot ap = new AutoPilot(vn);
+                AutoPilot ap1 = new AutoPilot(vn);
+                AutoPilot ap2 = new AutoPilot(vn);
+                try {
+                    ap.selectXPath("/TEI/text/body/entry");
+                    ap1.selectXPath("form");
+                    ap2.selectXPath("sense/cit");
+                    while (ap.evalXPath() != -1) {
+                        vn.push();
+                        while (ap1.evalXPath() != -1) {
+                            if (vn.toElement(VTDNav.FIRST_CHILD, "orth")) {
+                                values = new ContentValues();
+                                values.put(
+                                        EntryContract.DbEntry.COLUMN_Title,
+                                        vn.toNormalizedString(vn.getText())
+                                );
+                            }
+                        }
+                        ap1.resetXPath();
+                        vn.pop();
+                        vn.push();
+                        while (ap2.evalXPath() != -1) {
+                            if (vn.toElement(VTDNav.FIRST_CHILD, "quote")) {
+                                if (values != null && values.size() == 1) {
+                                    values.put(
+                                            EntryContract.DbEntry.COLUMN_Body,
+                                            vn.toNormalizedString(vn.getText())
+                                    );
+                                    values.put(
+                                            EntryContract.DbEntry.COLUMN_Hint,
+                                            tei.second
+                                    );
+                                    ops.add(ContentProviderOperation.newInsert(
+                                            EntryContentProvider.CONTENT_URI).withValues(values).build()
+                                    );
+                                    inserts++;
+                                    if (inserts % 3000 == 0) {
+                                        Log.v(tei.second, "importing " + Long.toString(inserts) + " ...");
+                                        getContentResolver().applyBatch(EntryContract.AUTHORITY, ops);
+                                        mPreferences.edit().putLong("reads", inserts).apply();
+                                        ops = new ArrayList<ContentProviderOperation>();
+                                    }
+                                }
+                            }
+                        }
+                        values = null;
+                        ap2.resetXPath();
+                        vn.pop();
+                    }
+                    getContentResolver().applyBatch(EntryContract.AUTHORITY, ops);
+                    mPreferences.edit().putLong("reads", inserts).apply();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
             return null;
         }
@@ -187,9 +336,23 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
-            entryAdapterDe.notifyDataSetChanged();
-            entryAdapterEn.notifyDataSetChanged();
-            entryAdapterKur.notifyDataSetChanged();
+            entryCursorAdapter.notifyDataSetChanged();
+            inserts = -1;
         }
+    }
+
+    public String readTextFile(InputStream inputStream) {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+        byte buf[] = new byte[1024];
+        int len;
+        try {
+            while ((len = inputStream.read(buf)) != -1) {
+                outputStream.write(buf, 0, len);
+            }
+            outputStream.close();
+            inputStream.close();
+        } catch (IOException e) {}
+        return outputStream.toString();
     }
 }
