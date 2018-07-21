@@ -5,3 +5,4 @@ offtrans/.idea/*
 offtrans/build
 offtrans/captures
 offtrans/.externalNativeBuild
+desktop/build*
