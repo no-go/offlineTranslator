@@ -1,6 +1,9 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
+#include <QStringListModel>
+#include <QAbstractListModel>
+#include <QModelIndex>
 #include "myclass.h"
 
 int main(int argc, char *argv[]) {
@@ -23,7 +26,8 @@ int main(int argc, char *argv[]) {
         &myClass,
         SLOT(cppSearch(QString))
     );
-    //QListView *lv = window->findChild<QListView*>("listView"); // ->insertRow(model->rowCount());
+    //QAbstractListModel *model = window->findChild<QAbstractListModel*>("model");
+    //QList<QObject*> dataList;
 
     QFile file(":/raw/worte.txt");
     if(!file.open(QIODevice::ReadOnly)) {
@@ -34,7 +38,9 @@ int main(int argc, char *argv[]) {
         QString line = in.readLine();
         QStringList fields = line.split(";");
         myClass.dataWorte[fields.at(0)] = line.replace(";"," - ");
-        //qDebug() << '.';
+        //model->insertRow(model->rowCount());
+        //QModelIndex index = model->index(model->rowCount()-1);
+        //model->setData(index, myClass.dataWorte[fields.at(0)]);
     }
     file.close();
 

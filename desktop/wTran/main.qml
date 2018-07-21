@@ -9,6 +9,7 @@ ApplicationWindow {
     height: 480
     minimumWidth: 320
     color: "#35459c"
+    property alias button1: button1
     title: qsTr("W Tran")
 
     signal qmlSearch(string x)
@@ -23,7 +24,7 @@ ApplicationWindow {
         anchors.rightMargin: 0
         anchors.left: parent.left
         anchors.leftMargin: 0
-        anchors.bottom: grid.top
+        anchors.bottom: row.top
         anchors.bottomMargin: 0
         anchors.top: textField.bottom
         anchors.topMargin: 5
@@ -89,72 +90,60 @@ ApplicationWindow {
     }
 
     Grid {
-        id: grid
+        id: row
         y: 0
-        height: 40
-        clip: false
-        anchors.right: parent.right
-        anchors.rightMargin: 0
-        anchors.left: parent.left
-        anchors.leftMargin: 0
+        anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 0
+        spacing: 2
+        columns: 4
 
-        Button {
-            id: button1
-            text: qsTr("Button")
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 0
-            anchors.top: parent.top
-            anchors.topMargin: 0
-            anchors.right: button2.left
-            anchors.rightMargin: 0
-            display: AbstractButton.IconOnly
-            anchors.left: parent.left
-            anchors.leftMargin: 0
-            icon.source: "img/worte.png"
+        Rectangle {
+            width: 60
+            height: 40
+            Button {
+                id: button1
+                text: qsTr("Button")
+                anchors.fill: parent
+                display: AbstractButton.IconOnly
+                icon.source: "img/worte.png"
+            }
         }
 
-        Button {
-            id: button2
-            width: 70
-            text: qsTr("Button")
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 0
-            anchors.top: parent.top
-            anchors.topMargin: 0
-            anchors.right: button3.left
-            anchors.rightMargin: 0
-            display: AbstractButton.IconOnly
-            icon.source: "img/deu_eng.png"
+        Rectangle {
+            width: 60
+            height: 40
+            Button {
+                id: button2
+                text: qsTr("Button")
+                anchors.fill: parent
+                display: AbstractButton.IconOnly
+                icon.source: "img/deu_eng.png"
+            }
         }
 
-        Button {
-            id: button3
-            width: 70
-            text: qsTr("Button")
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 0
-            anchors.top: parent.top
-            anchors.topMargin: 0
-            display: AbstractButton.IconOnly
-            anchors.right: button4.left
-            anchors.rightMargin: 0
-            icon.source: "img/ara_eng.png"
+        Rectangle {
+            width: 60
+            height: 40
+            Button {
+                id: button3
+                text: qsTr("Button")
+                anchors.fill: parent
+                display: AbstractButton.IconOnly
+                icon.source: "img/ara_eng.png"
+            }
         }
 
-        Button {
-            id: button4
-            width: 70
-            text: qsTr("Button")
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 0
-            anchors.top: parent.top
-            anchors.topMargin: 0
-            display: AbstractButton.IconOnly
-            anchors.right: parent.right
-            anchors.rightMargin: 0
-            icon.source: "img/kur_deu.png"
+        Rectangle {
+            width: 60
+            height: 40
+            Button {
+                id: button4
+                text: qsTr("Button")
+                anchors.fill: parent
+                display: AbstractButton.IconOnly
+                icon.source: "img/kur_deu.png"
+            }
         }
     }
 
