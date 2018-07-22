@@ -2,15 +2,13 @@ import QtQuick 2.9
 import QtQuick.Controls 2.2
 import wtran.myclass 1.0
 
-ApplicationWindow {
+Rectangle {
     id: applicationWindow
     visible: true
     width: 320
     height: 480
-    minimumWidth: 320
     color: "#35459c"
     property alias button1: button1
-    title: qsTr("W Tran")
 
     signal qmlSearch(string x)
 
@@ -39,7 +37,7 @@ ApplicationWindow {
         ListView {
             id: listView
             width: parent.width
-            model: model
+            model: myModel
             delegate: delegate
         }
 
@@ -80,6 +78,7 @@ ApplicationWindow {
             }
         }
 
+/*
         ListModel {
             id: model
             ListElement { title: "Germany"; body: "asa" }
@@ -87,6 +86,7 @@ ApplicationWindow {
             ListElement { title: "Italy"; body: "asa" }
             ListElement { title: "United Kingdom"; body: "asa" }
         }
+*/
     }
 
     Grid {

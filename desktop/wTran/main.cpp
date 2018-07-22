@@ -1,9 +1,11 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include <QQuickWindow>
-#include <QStringListModel>
-#include <QAbstractListModel>
-#include <QModelIndex>
+#include <QtWidgets/QListView>
+#include <QtQuickWidgets/QtQuickWidgets>
+#include <QQuickView>
+#include <qqmlengine.h>
+#include <qqmlcontext.h>
+#include <qqml.h>
 #include "myclass.h"
 
 int main(int argc, char *argv[]) {
@@ -13,21 +15,8 @@ int main(int argc, char *argv[]) {
     app.setWindowIcon(QIcon(":/img/logo.ico"));
     qmlRegisterType<MyClass>("wtran.myclass", 1, 0, "MyClass");
 
-    QQmlApplicationEngine engine;
-    engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
-    if (engine.rootObjects().isEmpty()) return -1;
-    QList<QObject*> xs = engine.rootObjects();
-    QQuickWindow *window = qobject_cast<QQuickWindow*>(xs.at(0));
     MyClass myClass;
-
-    QObject::connect(
-        window,
-        SIGNAL(qmlSearch(QString)),
-        &myClass,
-        SLOT(cppSearch(QString))
-    );
-    //QAbstractListModel *model = window->findChild<QAbstractListModel*>("model");
-    //QList<QObject*> dataList;
+    QList<QObject*> dataList;
 
     QFile file(":/raw/worte.txt");
     if(!file.open(QIODevice::ReadOnly)) {
@@ -38,11 +27,25 @@ int main(int argc, char *argv[]) {
         QString line = in.readLine();
         QStringList fields = line.split(";");
         myClass.dataWorte[fields.at(0)] = line.replace(";"," - ");
-        //model->insertRow(model->rowCount());
-        //QModelIndex index = model->index(model->rowCount()-1);
-        //model->setData(index, myClass.dataWorte[fields.at(0)]);
     }
     file.close();
+
+    QQuickView view;
+    view.setResizeMode(QQuickView::SizeRootObjectToView);
+    QQmlContext *ctxt = view.rootContext();
+    ctxt->setContextProperty("myModel", QVariant::fromValue(dataList));
+
+    view.setSource(QUrl(QStringLiteral("qrc:/main.qml")));
+
+
+    QObject::connect(
+        view.findChild<QObject *>("scrollView")->parent(),
+        SIGNAL(qmlSearch(QString)),
+        &myClass,
+        SLOT(cppSearch(QString))
+    );
+
+    view.show();
 
     return app.exec();
 }
