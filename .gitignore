@@ -5,6 +5,6 @@ offtrans/.idea/*
 offtrans/build
 offtrans/captures
 offtrans/.externalNativeBuild
-desktop/node_modules
-desktop/dist
+desktop/node_modules/**/*
+desktop/dist/**/*
 
