@@ -1,12 +1,28 @@
 {
+  "productName": "W Tran",
   "name": "w-tran",
   "version": "0.1.0",
-  "description": "offline thesaurus and translation",
+  "description": "offline thesaurus and translator",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
   },
+  "license": "MIT",
+  "author": "Jochen Peters, Krefeld",
   "devDependencies": {
-    "electron": "^2.0.5"
+    "electron": "^2.0.5",
+    "electron-builder": "^20.25.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/no-go/offlineTranslator.git"
+  },
+  "build": {
+    "appId": "de.digisocken.offtrans",
+    "mac": {
+      "category": "public.app-category.education"
+    }
   }
 }

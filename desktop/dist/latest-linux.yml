@@ -1,0 +1,9 @@
+version: 0.1.0
+files:
+  - url: w-tran-0.1.0-x86_64.AppImage
+    sha512: aE5qlTeyPWam+WfL4YPhCG5B6OKlPRyzP4bhFv621c873Ykg9LwwC9qdN0ga5FbfrYRAKpad7DGY02tsY/Xomg==
+    size: 53359810
+    blockMapSize: 56838
+path: w-tran-0.1.0-x86_64.AppImage
+sha512: aE5qlTeyPWam+WfL4YPhCG5B6OKlPRyzP4bhFv621c873Ykg9LwwC9qdN0ga5FbfrYRAKpad7DGY02tsY/Xomg==
+releaseDate: '2018-07-25T17:45:26.964Z'

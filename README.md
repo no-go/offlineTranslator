@@ -56,7 +56,7 @@ If you have any questions or concerns about my Privacy Policy or data processing
 
 ## Licenses
 
-### License - My Android Code
+### License - My Android and my Node.js Code
 
 This is free and unencumbered software released into the public domain.
 

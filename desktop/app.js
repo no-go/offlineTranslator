@@ -1,4 +1,5 @@
 var fs = require("fs");
+var path = require('path'); 
 
 var $ = function (selector) {
     return document.querySelector(selector);
@@ -112,19 +113,19 @@ onload = function() {
     logElement = $("#output");
     inputElement = $("#query");
     
-    fs.readFile('raw/openthesaurus.txt', 'utf8', function (err,data) {
+    fs.readFile(path.join(__dirname, 'raw', 'openthesaurus.txt'), 'utf8', function (err,data) {
         array = data.split("\n");
     });
     
-    fs.readFile('raw/deu_eng.tei', 'utf8', function (err,data) {
+    fs.readFile(path.join(__dirname, 'raw', 'deu_eng.tei'), 'utf8', function (err,data) {
         array2 = data.split("\n");
     });
     
-    fs.readFile('raw/ara_eng.tei', 'utf8', function (err,data) {
+    fs.readFile(path.join(__dirname, 'raw', 'ara_eng.tei'), 'utf8', function (err,data) {
         array3 = data.split("\n");
     });
     
-    fs.readFile('raw/kur_deu.tei', 'utf8', function (err,data) {
+    fs.readFile(path.join(__dirname, 'raw', 'kur_deu.tei'), 'utf8', function (err,data) {
         array4 = data.split("\n");
     });
     

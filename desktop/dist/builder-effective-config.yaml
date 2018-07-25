@@ -1,0 +1,7 @@
+directories:
+  output: dist
+  buildResources: build
+appId: de.digisocken.offtrans
+mac:
+  category: public.app-category.education
+electronVersion: 2.0.5
