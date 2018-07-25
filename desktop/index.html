@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>W Tran</title>
+    <script src="app.js"></script>
+    <style>
+body {
+    background: #3f51b5;
+    color: white;
+    font-size: 105%;
+}
+
+#output {
+    margin-top: 50px;
+    margin-bottom: 55px;
+    min-height: 0px;
+    font-family: sans;
+    background: white;
+    color: black;
+}
+
+#query {
+    top: 0px;
+    left: 0px;
+    position: fixed;
+    width: 100%;
+    background: #3f51b5;
+    color: white;
+    border: 0px solid;
+    padding: 5px;
+    font-size: 110%;
+}
+.st {
+    background: #ffffff;
+    padding: 5px;
+    border-bottom: 1px solid #999999;
+}
+b {
+    color: #1797c4;
+}
+
+.nd {
+    background: #feffe0;
+    padding: 5px;
+    border-bottom: 1px solid #999999;
+}
+
+.mark {
+    font-weight: bold;
+    color: #6dc944;
+}
+
+#selector {
+    position: fixed;
+    left: 0px;
+    bottom: 0px;
+    background: #e0e0e0;
+    width: 100%;
+}
+
+button {
+    position: relative;
+    height: 40px;
+    width: 80px;
+    margin: 2px;
+    background: transparent;
+    color: white;
+    border: 1px solid white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all ease 0.5s;
+}
+
+button:hover, button:active {
+    outline: none;
+    background: white;
+    color: blue;
+}
+
+#worte {
+    background: url(img/worte.png) no-repeat center center;
+}
+#deu_eng {
+    background: url(img/deu_eng.png) no-repeat center center;
+}
+#ara_eng {
+    background: url(img/ara_eng.png) no-repeat center center;
+}
+#kur_deu {
+    background: url(img/kur_deu.png) no-repeat center center;
+}
+    </style>
+</head>
+<body>
+    <input 
+     type="text" 
+     id="query" 
+     name="query" 
+     placeholder="search ..." 
+     onchange="startSearch(this);" />
+    <div id="output"></div>
+    <div id="selector">
+        <center>
+            <button id="worte" onClick="setMode('worte');">Thesaurus</button>
+            <button id="deu_eng" onClick="setMode('deu_eng');">deu-eng</button>
+            <button id="ara_eng" onClick="setMode('ara_eng');">ara-eng</button>
+            <button id="kur_deu" onClick="setMode('kur_deu');">kur-deu</button>
+        </center>
+    </div>
+</body>
+</html>
