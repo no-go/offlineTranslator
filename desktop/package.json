@@ -23,6 +23,10 @@
     "appId": "de.digisocken.offtrans",
     "mac": {
       "category": "public.app-category.education"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "build/icon.ico"
     }
   }
 }

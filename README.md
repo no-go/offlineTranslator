@@ -13,6 +13,11 @@ tei xml-files from [freedict.org](https://github.com/freedict/fd-dictionaries).
 
 You can get a signed APK from here (Android 4.4+): [APK](https://raw.githubusercontent.com/no-go/offlineTranslator/master/offtrans/app/release/app-release.apk)
 
+## Desktop
+
+I try to build a Desktop version with nodejs and electron. You find executable
+in my dropbox: [here](https://www.dropbox.com/sh/u18mceddc5u0008/AAD7rxHHM9SdnO_v2iWBdroLa?dl=0)
+
 ## Feature
 
 - initial offline in app import to a fast database
