@@ -4,21 +4,37 @@ A database offline translator and german dictionary.
 
 ![logo](offtrans/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png)
 
-this is a very slow starting simple de-eng, eng-de offline translator using two big
+this is a very slow starting (but than fast) simple de-eng, eng-de offline translator using big
 tei xml-files from [freedict.org](https://github.com/freedict/fd-dictionaries).
 
-**This App is in beta state!!!**
+**This App exists in beta state!!!**
 
 ## Get the App
 
-You can get a signed APK from here (Android 4.4+): [APK](https://raw.githubusercontent.com/no-go/offlineTranslator/master/offtrans/app/release/app-release.apk)
+You can get a signed APK from here or via play store (Android 4.4+): [APK](https://raw.githubusercontent.com/no-go/offlineTranslator/master/offtrans/app/release/app-release.apk)
 
-## Desktop
+## Desktop Version
 
 I try to build a Desktop version with nodejs and electron. You find executable
-in my dropbox: [here](https://www.dropbox.com/sh/u18mceddc5u0008/AAD7rxHHM9SdnO_v2iWBdroLa?dl=0)
+in my dropbox: [Download](https://www.dropbox.com/sh/u18mceddc5u0008/AAD7rxHHM9SdnO_v2iWBdroLa?dl=0)
 
-## Feature
+If you want to run the code inside the `desktop/` folder with plain [node.js](https://nodejs.org)
+you have to:
+
+- install nodejs (and npm)
+- switch into the `desktop/` folder
+- do `npm i -D electron@latest`
+- do `npm start`
+
+If you want to build your own desktop executable:
+
+- install [yarn](https://yarnpkg.com)
+- switch into the `desktop/` folder
+- do `npm install`
+- do `yarn add electron-builder --dev`
+- do `yarn dist`
+
+## Feature (Android)
 
 - initial offline in app import to a fast database
 - dictionary: german
@@ -30,9 +46,10 @@ in my dropbox: [here](https://www.dropbox.com/sh/u18mceddc5u0008/AAD7rxHHM9SdnO_
 
 no.
 
-- It will be better to have a reimport button, if initial import crashs.
+- On Android: It will be better to have a reimport button, if initial import crashs.
 - It will be better to make the tei files downloadable or import file from your phone.
 - many informations of the TEI files are not displayed
+- Some TEI infos in desktop version displays wrong :-(
 
 ## I need kurdî -> türkçe !
 
@@ -99,6 +116,20 @@ with this license:
 
 
 ## Screenshots
+
+### Win 10
+
+![windows 10](metadata/de-DE/images/phoneScreenshots/6.jpg)
+
+### Linux
+
+![Linux](metadata/de-DE/images/phoneScreenshots/7.jpg)
+
+### Mac OS X (10.10)
+
+![Mac OS X](metadata/de-DE/images/phoneScreenshots/8.jpg)
+
+### Android
 
 ![app image initial import](metadata/de-DE/images/phoneScreenshots/0.jpg)
 
