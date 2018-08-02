@@ -1,17 +1,25 @@
 const {app, BrowserWindow} = require('electron')
 
+require('electron-context-menu')({
+    prepend: (params, browserWindow) => [{
+        label: 'W Tran',
+        // Only show it when right-clicking images
+        visible: params.mediaType === 'text'
+    }]
+});
+
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let win
 
 function createWindow () {
     // Create the browser window.
-    win = new BrowserWindow({width: 400, height: 600, icon: __dirname + '/img/logo.png'});
+    win = new BrowserWindow({width: 400, height: 600, icon: __dirname + '/img/icon.png'});
     win.setMenu(null);
 
     // and load the index.html of the app.
     win.loadFile('index.html')
-    //win.webContents.openDevTools()
+    win.webContents.openDevTools()
 
     // Emitted when the window is closed.
     win.on('closed', () => {

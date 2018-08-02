@@ -1,38 +1,68 @@
 var fs = require("fs");
 var path = require('path'); 
+var $ = require("jquery");
+var request = require('ajax-request');
 
-var $ = function (selector) {
-    return document.querySelector(selector);
-}
+//var $ = require('jquery'), XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
+//var $ = function (selector) {
+//    return document.querySelector(selector);
+//}
 
 var array = [];
 var array2 = [];
 var array3 = [];
-var array4 = [];
 var logElement;
 var inputElement;
 var dataMode = 'worte';
 
-var modes = ['worte', 'deu_eng', 'ara_eng', 'kur_deu'];
+var modes = ['worte', 'deu_eng', 'deepl'];
 
 var setMode = function (m) {
     dataMode = m;
     for (var i = 0, len = modes.length; i < len; i++) {
-        $('#'+modes[i]).style.color = "white";
+        $('#'+modes[i]).css({"color": "white"});
     }
-    $('#'+m).style.color = "blue";
+    $('#'+m).css({"color": "blue"});
 };
 
 var startSearch = function (q) {
     if (dataMode == 'deu_eng') {
         startSearchTei(q, array2);
-    } else if (dataMode == 'ara_eng') {
-        startSearchTei(q, array3);
-    } else if (dataMode == 'kur_deu') {
-        startSearchTei(q, array4);
+    } else if (dataMode == 'deepl') {
+        startSearchDeepl(q);
     } else {
         startSearchWorte(q);
     }
+};
+
+var startSearchDeepl = function (q, arr) {
+    q = q.value.trim();
+    if (q.length < 3) return;
+
+    request({
+        url: 'https://www2.deepl.com/jsonrpc',
+        method: 'GET',
+        data: {
+            ajax: "1",
+            delay: "800",
+            eventkind: "change",
+            forleftside: "true",
+            jsStatus: "0",
+            kind: "full",
+            onlyDictEntries: "1",
+            text: q,
+            source: "german",
+            translator: "dnsof7h3k2lgh3gda"
+            }
+        }, 
+        function(err, res, body) {
+            console.log(err);
+            console.log(res);
+            console.log(body);
+            logElement.html(body);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+    );
 };
 
 var startSearchTei = function (q, arr) {
@@ -73,9 +103,8 @@ var startSearchTei = function (q, arr) {
         dummy += tmp.slice(1).join(' &middot; ') + "</div>";
         j++;
     }
-    $("#output").innerHTML = dummy;
-    $("#output").scrollTop = logElement.scrollHeight;
-    
+    logElement.html(dummy);
+    logElement.scrollTop = logElement.scrollHeight;    
 };
 
 var startSearchWorte = function (q) {
@@ -104,9 +133,8 @@ var startSearchWorte = function (q) {
         dummy += tmp.slice(1).join(' &middot; ') + "</div>";
         j++;
     }
-    $("#output").innerHTML = dummy;
-    $("#output").scrollTop = logElement.scrollHeight;
-    
+    logElement.html(dummy);
+    logElement.scrollTop = logElement.scrollHeight;
 };
 
 onload = function() {
@@ -119,14 +147,6 @@ onload = function() {
     
     fs.readFile(path.join(__dirname, 'raw', 'deu_eng.tei'), 'utf8', function (err,data) {
         array2 = data.split("\n");
-    });
-    
-    fs.readFile(path.join(__dirname, 'raw', 'ara_eng.tei'), 'utf8', function (err,data) {
-        array3 = data.split("\n");
-    });
-    
-    fs.readFile(path.join(__dirname, 'raw', 'kur_deu.tei'), 'utf8', function (err,data) {
-        array4 = data.split("\n");
     });
     
     setMode('worte');
